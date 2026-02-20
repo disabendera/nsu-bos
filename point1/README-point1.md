@@ -28,7 +28,7 @@ file hello
 -   **64-bit** --- архитектура x86-64
 -   **LSB** --- Little Endian
 -   **pie executable** --- Position Independent Executable (может быть
-    загружен по случайному адресу --- ASLR)
+    загружен по случайному адресу)
 -   **dynamically linked** --- используется динамическая линковка
 -   **interpreter** --- путь к динамическому загрузчику
 
