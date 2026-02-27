@@ -8,11 +8,19 @@ static long my_write_asm(int fd, const void *buf, size_t count) {
     register long rsi __asm__("rsi") = (long)buf;
     register long rdx __asm__("rdx") = (long)count;
 
+	/*
+	mov rax, 1
+	mov rdi, 1
+	mov rsi, msg
+	mov rdx, 12
+	syscall
+	*/
+
     __asm__ volatile (
         "syscall"
-        : "=a"(ret)
-        : "a"(rax), "D"(rdi), "S"(rsi), "d"(rdx)
-        : "rcx", "r11", "memory"
+        : "=a"(ret) // = - только запись
+        : "a"(rax), "D"(rdi), "S"(rsi), "d"(rdx) // регистровые константы
+        : "rcx", "r11", "memory" // clobbered - регистры rcx, r11 будут изменены внутри asm, а также может читать и изменять память
     );
     return ret;
 }
