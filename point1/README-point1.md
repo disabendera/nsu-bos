@@ -308,7 +308,7 @@ glibc вызывает syscall:
     disk → DMA → RAM → page cache → user buffer
 
 1.  формируется запрос к блочному устройству
-2.  контроллер диска выполняет DMA
+2.  контроллер диска выполняет DMA (Direct Memory Access)
 3.  данные попадают в RAM
 4.  страница добавляется в page cache
 5.  копируется в память процесса
@@ -342,7 +342,7 @@ glibc вызывает syscall:
 # 12. Используемые системные вызовы
 
 libc      syscall
-  --------- ------------
+--------- ------------
 open      openat
 opendir   openat
 readdir   getdents64
