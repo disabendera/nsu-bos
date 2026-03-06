@@ -705,3 +705,44 @@ CPU:
 - CPL 0 -> 3
 |
 Продолжает юзер
+
+------------------------------------------------------------------
+
+user program
+│
+│ registers prepared
+│
+▼
+syscall instruction
+│
+│ CPU:
+│   RCX ← RIP
+│   R11 ← RFLAGS
+│   CPL 3 → 0
+│   RIP ← IA32_LSTAR
+│   RFLAGS &= ~IA32_FMASK
+│
+▼
+kernel entry (entry_SYSCALL_64)
+│
+│ switch to kernel stack
+│ save registers
+│
+▼
+sys_call_table[RAX]
+│
+▼
+syscall handler (например write)
+│
+▼
+result → RAX
+│
+▼
+sysret
+│
+│ CPU:
+│   RIP ← RCX
+│   RFLAGS ← R11
+│   CPL 0 → 3
+▼
+user program continues
