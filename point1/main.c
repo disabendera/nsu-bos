@@ -118,7 +118,7 @@ int main(void) {
 
     // printf("value by dangling_ptr      : %d\n", *dangling_ptr);
 
-    // heap_experiment();
+    heap_experiment();
 
     env_experiment();
 
