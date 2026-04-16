@@ -1,129 +1,83 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
-#include <string.h>
-#include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
-int g_init = 42;
+int global_var = 100;
 
-int g_uninit;
+int main() {
+    int local_var = 200;
 
-const int g_const = 100;
+    printf("=== До fork ===\n");
+    printf("Parent PID: %d\n", getpid());
+    printf("global_var: address=%p, value=%d\n", (void *)&global_var, global_var);
+    printf("local_var : address=%p, value=%d\n", (void *)&local_var, local_var);
+    printf("\n");
 
-const char *g_str = "global string literal";
+    pid_t pid = fork();
 
-void print_addresses(void) {
-    int local_var = 10;
-
-    static int static_var = 20;
-
-    const int local_const = 30;
-
-    const char *local_str = "local string literal";
-
-    printf("PID: %d\n\n", getpid());
-
-    printf("=== Addresses of variables ===\n");
-    printf("local_var                : %p (value=%d)\n", (void *)&local_var, local_var);
-    printf("static_var               : %p (value=%d)\n", (void *)&static_var, static_var);
-    printf("local_const              : %p (value=%d)\n", (void *)&local_const, local_const);
-
-    printf("g_init                   : %p (value=%d)\n", (void *)&g_init, g_init);
-    printf("g_uninit                 : %p (value=%d)\n", (void *)&g_uninit, g_uninit);
-    printf("g_const                  : %p (value=%d)\n", (void *)&g_const, g_const);
-
-    printf("\n=== Addresses of pointers / literals ===\n");
-    printf("g_str variable           : %p\n", (void *)&g_str);
-    printf("g_str points to          : %p -> \"%s\"\n", (void *)g_str, g_str);
-
-    printf("local_str variable       : %p\n", (void *)&local_str);
-    printf("local_str points to      : %p -> \"%s\"\n", (void *)local_str, local_str);
-}
-
-int *return_local_address(void) {
-    int local_in_func = 12345;
-
-    printf("\n=== Returning address of local variable ===\n");
-    printf("Inside return_local_address():\n");
-    printf("local_in_func address      : %p\n", (void *)&local_in_func);
-    printf("local_in_func value        : %d\n", local_in_func);
-
-    return &local_in_func;
-}
-
-void heap_experiment(void) {
-    printf("\n=== Heap experiment ===\n");
-
-    char *buf = (char *)malloc(100);
-    if (buf == NULL) {
-        perror("malloc");
-        return;
+    if (pid < 0) {
+        perror("fork failed");
+        return 1;
     }
 
-    strcpy(buf, "hello world");
+    if (pid == 0) {
+        printf("=== Дочерний процесс ===\n");
+        printf("Child PID : %d\n", getpid());
+        printf("Parent PID: %d\n", getppid());
 
-    printf("buf address               : %p\n", (void *)buf);
-    printf("buf content before free   : %s\n", buf);
+        printf("Before change:\n");
+        printf("global_var: address=%p, value=%d\n", (void *)&global_var, global_var);
+        printf("local_var : address=%p, value=%d\n", (void *)&local_var, local_var);
+		sleep(20); // посмотреть maps до записи
 
-    free(buf);
+        global_var = 1111;
+        local_var = 2222;
 
-    printf("buf content after free    : %s\n", buf);
+        printf("After change:\n");
+        printf("global_var: address=%p, value=%d\n", (void *)&global_var, global_var);
+        printf("local_var : address=%p, value=%d\n", (void *)&local_var, local_var);
 
-    char *buf2 = (char *)malloc(100);
-    if (buf2 == NULL) {
-        perror("malloc");
-        return;
+		// sleep(10); // для sigkill
+		sleep(40); // посмотреть maps после записи
+
+        printf("Child exits with code 5\n");
+        exit(5);
+    } else {
+        int status;
+
+        printf("=== Родительский процесс ===\n");
+        printf("Parent PID: %d\n", getpid());
+        printf("Child PID : %d\n", pid);
+
+        printf("Parent sees variables before sleep:\n");
+        printf("global_var: address=%p, value=%d\n", (void *)&global_var, global_var);
+        printf("local_var : address=%p, value=%d\n", (void *)&local_var, local_var);
+
+		// kill(pid, SIGKILL); // нет exit code, есть signal number
+
+        printf("Parent sleeps for 30 seconds...\n");
+        sleep(70);
+
+        pid_t finished_pid = wait(&status);
+
+        printf("wait() returned PID = %d\n", finished_pid);
+
+        if (WIFEXITED(status)) {
+            printf("Child terminated normally\n");
+            printf("Exit code: %d\n", WEXITSTATUS(status));
+        } else if (WIFSIGNALED(status)) {
+            printf("Child terminated by signal\n");
+            printf("Signal number: %d\n", WTERMSIG(status));
+        } else {
+            printf("Child terminated for another reason\n");
+        }
+
+        printf("Parent final values:\n");
+        printf("global_var: address=%p, value=%d\n", (void *)&global_var, global_var);
+        printf("local_var : address=%p, value=%d\n", (void *)&local_var, local_var);
     }
-
-    strcpy(buf2, "hello world");
-
-    printf("buf2 address              : %p\n", (void *)buf2);
-    printf("buf2 content              : %s\n", buf2);
-
-    char *middle = buf2 + 50;
-    printf("middle pointer            : %p\n", (void *)middle);
-
-    printf("free(middle) ...\n");
-    free(middle);
-
-    printf("buf2 content after bad free: %s\n", buf2);
-}
-
-void env_experiment(void) {
-    const char *var_name = "LAB4_ENV";
-
-    printf("\n=== Environment variable experiment ===\n");
-
-    char *initial_value = getenv(var_name);
-    printf("%s before change       : %s\n",
-           var_name, initial_value ? initial_value : "(null)");
-
-    if (setenv(var_name, "second_value", 1) != 0) {
-        perror("setenv");
-        return;
-    }
-
-    char *new_value = getenv(var_name);
-    printf("%s after change        : %s\n",
-           var_name, new_value ? new_value : "(null)");
-}
-
-int main(void) {
-    print_addresses();
-
-    int *dangling_ptr = return_local_address();
-
-    printf("\nAfter returning from function:\n");
-    printf("dangling_ptr               : %p\n", (void *)dangling_ptr);
-
-    // printf("value by dangling_ptr      : %d\n", *dangling_ptr);
-
-    heap_experiment();
-
-    env_experiment();
-
-    printf("\nProgram is sleeping for 60 seconds...\n");
-    sleep(60);
 
     return 0;
 }
