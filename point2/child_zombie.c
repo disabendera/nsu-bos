@@ -13,12 +13,15 @@ int main() {
 
     if (pid == 0) {
         printf("[child] PID = %d, PPID = %d\n", getpid(), getppid());
-        printf("[child] exiting now\n");
+		sleep(30);
+		printf("[child] exiting now\n");
         exit(5);
     } else {
         printf("[parent] PID = %d, child PID = %d\n", getpid(), pid);
         printf("[parent] sleeping 30 seconds without wait()\n");
-        sleep(30);
+		int status;
+        wait(&status);
+		printf("waited: %d\n", status);
         printf("[parent] done\n");
     }
 
